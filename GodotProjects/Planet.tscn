@@ -1,0 +1,26 @@
+[gd_scene load_steps=6 format=2]
+
+[ext_resource path="res://planet.png" type="Texture" id=1]
+[ext_resource path="res://Gravity.gd" type="Script" id=2]
+[ext_resource path="res://PlanetGenerator.gd" type="Script" id=3]
+[ext_resource path="res://Test.tres" type="Material" id=4]
+
+[sub_resource type="CircleShape2D" id=1]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource( 2 )
+
+[node name="Light2D" type="Light2D" parent="."]
+texture = ExtResource( 1 )
+mode = 3
+
+[node name="Sprite" type="Sprite" parent="Light2D"]
+material = ExtResource( 4 )
+texture = ExtResource( 1 )
+script = ExtResource( 3 )
+
+[node name="RigidBody2D" type="RigidBody2D" parent="Light2D"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Light2D/RigidBody2D"]
+shape = SubResource( 1 )
+one_way_collision = true

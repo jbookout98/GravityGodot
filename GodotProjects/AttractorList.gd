@@ -4,7 +4,7 @@ extends Node
 # Declare member variables here. Examples:
 # var a = 2
 # var b = "text"
-var attractors=[]
+var attractors =[]
 func _process(delta):
 	if attractors.size()<=0:
 		StartArray()	
@@ -17,6 +17,8 @@ func StartArray():
 	
 func addTo_attractors():
 	pass
-	
+
+
+
 func get_attractors():
 	return attractors

@@ -1,15 +1,19 @@
 extends Node2D
 
-var MAX_POINTS = 360
+var MAX_POINTS = 1000
 var line :Line2D
 var G = 9.8
 var sunGravity:RigidBody2D
+var attractorList=[]
 var currentMass =5.9
 var pressed :bool=false
-var velocity = Vector2(0,1600)
+var velocity = Vector2(0,6700)
 var g_base =.0006
 var checker :Sprite
 var g_constant = 0.00006
+var for_loop_running=false
+
+var thread
 # Declare member variables here. Examples:
 # var a = 2
 # var b = "text"
@@ -17,124 +21,84 @@ var g_constant = 0.00006
 var mousePosition:Vector2
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	sunGravity = get_parent().get_node("KeepAttractors/Sun")
+	attractorList=get_parent().get_node("KeepAttractors").get_attractors()
+	
+	thread =Thread.new()
 	checker = get_node("SpriteChecker")
 	line = get_node("Line2D")
 	pass # Replace with function body.
 
-func _unhandled_input(event):
+#input function
+#detects drag
+func _input(event):
 
-	if event is InputEventMouse:
-		if event.button_mask==BUTTON_MASK_LEFT:
+	if event is InputEventMouseButton:
+		
+		if event.pressed:
+			match event.button_index:
 			#Spawn a new node of type node wiht settings youve created
+				BUTTON_LEFT:
+					print(attractorList.size())
+					mousePosition=get_global_mouse_position()
+					pressed=true
+		else:
+			pressed= false		
 			
-			mousePosition=get_global_mouse_position()
-			pressed=true
-	else:
-		pressed= false		
-			
 
 
-
+#Function that update the line2D trajectory 
+#returns nothing
+#called from process function
 func _update_trajectory(delta):
 	line.clear_points()
+	
 	var line_points = []
 	var pos = mousePosition
 	
-	#starting velocity 200 for now
-	var xAxis=200
-	var yAxis =200
 	
 	var vel = velocity
-	var vecR = sunGravity.position-pos
-	var gravityForce = (vecR).normalized()
-	var angle= 0
 	
-	var r = find_r(mousePosition,sunGravity.position,delta,angle)
-	var lastPos = pos +velocity.normalized()
-	for i in range(1,MAX_POINTS-1):
+
+	
+	var i =1
+	# loop to draw points for prediction line of orbit
+	while i< MAX_POINTS:
 		line_points.append(pos)
 		
-		vel+=Accel_return(pos,lastPos)*delta
-		lastPos=pos
+		
+		vel+=Rigidbody_test(pos)
+		
+		
 		pos += vel*delta
 		
-		
-	for l in line_points:
-		line.add_point(l)		
-		
-		
-		
+		i+=1
 	
+	line.points=line_points	
+	
+	call_deferred("_thread_done")
 		
-		
-		
-		
-func Accel_return(pos1:Vector2,lastPos:Vector2):
-	var forceDir =(lastPos-pos1).normalized()
-	var sqrDist = pow(forceDir.length(),2)
-	var acceleration = forceDir*g_constant*currentMass/sqrDist
-	return acceleration
-		
+
+
 func Rigidbody_test(pos1:Vector2):
-	var rb :RigidBody2D
-	rb = sunGravity
-	
-	var dir:Vector2
-	dir = rb.position-pos1
+
+	var planetPos = attractorList[0].position
+	var dir=(planetPos-pos1)
 	var dis = dir.length()
-	var distanceSize = (rb.get_node("CollisionShape2D").scale.x+1)*10
-	
-	var ds = dis-distanceSize
-	
-	if(ds < 1):
-		return
-	var forceMagnitude = -2*G*((rb.mass*currentMass)/dis)
-	
-	var force:Vector2
-	force =dir.normalized()*forceMagnitude
-	
+	var forceMag= 2*G*((attractorList[0].mass*currentMass)/dis)
+	var force =dir.normalized()*forceMag
 	return force
-		
-		
-func r_Path(angle:float, pos1:Vector2):
-	
-	var distance = (pos1-sunGravity.position).length()
-	var v= velocity.length()
-	var bottom = 2*(G*sunGravity.mass)-distance*pow(v,2)
-	var top =  G*sunGravity.mass*distance
-	var a = top/bottom
-	var inside_e =1+((distance*pow(v,2)/(G*sunGravity.mass))*((distance*pow(v,2)-2)))
-	var e= sqrt(inside_e)
-	var r = a*(1-pow(e,2))/(1+e*cos(angle))
-	return r
 
-func find_r(pos1:Vector2,pos2:Vector2,delta:float,angle:float):
-	var distance = (pos1-pos2).length()
-	var v= velocity.length()
-	var bottom = 2*(G*sunGravity.mass)-distance*pow(v,2)
-	var top =  G*sunGravity.mass*distance
-	var a = top/bottom
-	var inside_e =1+((distance*pow(v,2)/(G*sunGravity.mass))*((distance*pow(v,2)-2)))
-	var e= sqrt(inside_e)
-	var theta = find_offset_angle(a,e,pos1,v)
-	var r = a*(1-pow(e,2))/(1+e*cos(angle))
-	var offsetandR = Vector2(r,theta)
-	return offsetandR
-	pass
-func find_offset_angle(a:float,e:float,pos1:Vector2,v:float):
-	var top = a*(1-pow(e,2))-sqrt(pow(pos1.x,2)+pow(pos1.x,2))
-	var bottom = e*sqrt(pow(pos1.x,2)+pow(pos1.x,2))
-	var inside_cos = top/bottom
-	
-	var v_theta=((pos1.x*velocity.y)-(pos1.y*velocity.x))/sqrt(pow(pos1.x,2)+pow(pos1.x,2))
-	var v_r=((pos1.x*velocity.x)-(pos1.y*velocity.y))/sqrt(pow(pos1.x,2)+pow(pos1.x,2))
-	var theta = sign(v_theta*v_r)*acos(inside_cos)-atan2(pos1.y,pos1.x)
-	return theta
-
+func _thread_done():
+	thread.wait_to_finish()
+var pro=0
 func _process(delta):
 	if pressed == true:
-		_update_trajectory(delta)
+		if thread.is_active()==false:
+			
+			thread.start(self,"_update_trajectory",delta)
+	
+	
+			
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 #func _process(delta):
 #	pass

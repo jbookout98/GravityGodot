@@ -15,7 +15,7 @@ func getName():
 func _ready():
 	attractorParent =self.get_parent()
 	
-func _process(delta):
+func _process(_delta):
 	if(area.size()<=0):
 		area = attractorParent.get_attractors()
 	

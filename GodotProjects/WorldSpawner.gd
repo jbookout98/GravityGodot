@@ -2,8 +2,9 @@ extends Node2D
 
 var MAX_POINTS = 1000
 var line :Line2D
-var G = 9.8
+var G = 0.6
 var sunGravity:RigidBody2D
+var attractor
 var attractorList=[]
 var currentMass =5.9
 var pressed :bool=false
@@ -13,6 +14,9 @@ var checker :Sprite
 var g_constant = 0.00006
 var for_loop_running=false
 
+
+var canvas_planet_node
+
 var thread
 # Declare member variables here. Examples:
 # var a = 2
@@ -21,7 +25,9 @@ var thread
 var mousePosition:Vector2
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	attractorList=get_parent().get_node("KeepAttractors").get_attractors()
+	attractor=get_parent().get_node("KeepAttractors")
+	attractorList=attractor.get_attractors()
+	
 	
 	thread =Thread.new()
 	checker = get_node("SpriteChecker")
@@ -30,17 +36,16 @@ func _ready():
 
 #input function
 #detects drag
-func _input(event):
+func _unhandled_input(event):
 
 	if event is InputEventMouseButton:
 		
-		if event.pressed:
-			match event.button_index:
-			#Spawn a new node of type node wiht settings youve created
-				BUTTON_LEFT:
-					print(attractorList.size())
-					mousePosition=get_global_mouse_position()
-					pressed=true
+		if event.button_index == BUTTON_LEFT and event.pressed:
+			
+			
+			mousePosition=get_global_mouse_position()
+			pressed=true
+				
 		else:
 			pressed= false		
 			
@@ -57,12 +62,11 @@ func _update_trajectory(delta):
 	
 	
 	var vel = velocity
-	
-
-	
+	var end: bool = false
+# create new intersection and sort
 	var i =1
 	# loop to draw points for prediction line of orbit
-	while i< MAX_POINTS:
+	while end == false:
 		line_points.append(pos)
 		
 		
@@ -71,14 +75,34 @@ func _update_trajectory(delta):
 		
 		pos += vel*delta
 		
-		i+=1
+		var check = IntersectionCheck(pos,line_points[line_points.size()-1],line_points)
+		
+		
+		if(check):
+			
+			line_points.append(pos)
+			end=true
+			
+		
+	
 	
 	line.points=line_points	
 	
-	call_deferred("_thread_done")
+	#call_deferred("_thread_done")
+func IntersectionCheck(currentPos,lastPos,linePoints):
+	
+	var checked:bool =false
+	for i in range(0,linePoints.size()-2):
+		var vec1 = linePoints[i]
+		var vec2 = linePoints[i+1]
 		
+		if(Geometry.segment_intersects_segment_2d(lastPos,currentPos,vec1,vec2)!=null):
+			checked=true
+	return checked
+	
 
 
+		
 func Rigidbody_test(pos1:Vector2):
 
 	var planetPos = attractorList[0].position
@@ -90,15 +114,18 @@ func Rigidbody_test(pos1:Vector2):
 
 func _thread_done():
 	thread.wait_to_finish()
-var pro=0
+
 func _process(delta):
-	if pressed == true:
-		if thread.is_active()==false:
-			
-			thread.start(self,"_update_trajectory",delta)
 	
+	if pressed == true:
+		#var canvas = canvas_planet_node.instace()
+		attractor.InstancePlanet(mousePosition)
+		get_tree().paused=true
+		_update_trajectory(delta)
+	pressed=false
 	
 			
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 #func _process(delta):
 #	pass
+

@@ -1,5 +1,3 @@
-
-
 extends RigidBody2D
 
 # Declare member variables here. Examples:
@@ -7,7 +5,7 @@ extends RigidBody2D
 # var b = "text"
 var attractor =[]
 var attractorParent
-var G = 9.8
+var G = .6
 var area=[]
 func getName():
 	return self.na
@@ -15,19 +13,18 @@ func getName():
 func _ready():
 	attractorParent =self.get_parent()
 	
-func _process(_delta):
-	if(area.size()<=0):
-		area = attractorParent.get_attractors()
 	
+	print(attractorParent)
+
 
 	 # Replace with function body.
 
 
 func _physics_process(delta):
-	for g in area:
+	for g in  attractorParent.get_attractors():
 		if(g != self):
 			Attract(g)
-
+	
 func Attract(planet:Node2D):
 	var rb :RigidBody2D
 	rb = planet
